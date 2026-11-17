@@ -2,12 +2,7 @@
 /// @brief Checking that an array actually covers: the project's *fast*
 /// verifier.
 ///
-/// See CLAUDE.md / README: "a fast vectorized coverage-mask checker for
-/// inner search loops, and a strict, obviously-correct-by-inspection
-/// reference checker". Only the fast one is implemented here; a future
-/// `verify_strict` belongs beside it in the same header, sharing
-/// verify_options / verify_result, with a differential test asserting the
-/// two agree.
+/// This is a vectorized coverage-mask checker meant for inner search loops.
 ///
 /// ### Algorithm
 ///
@@ -113,7 +108,7 @@ struct verify_result {
 [[nodiscard]] std::string missing_report_filename(const array& a);
 
 /// @brief Writes every combination in `result.missing` to `path`: one block
-/// per deficient combination, naming its columns (1-indexed) and listing
+/// per deficient combination, naming its columns (0-indexed) and listing
 /// every tuple it fails to cover.
 /// @throws std::runtime_error if the file cannot be opened.
 void write_missing(const std::filesystem::path& path, const array& a, const verify_result& result);

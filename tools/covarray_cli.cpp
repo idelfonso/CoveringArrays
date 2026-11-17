@@ -8,8 +8,8 @@
 /// @endcode
 ///
 /// built on covarray::verify_fast(). `--help` and `--version` are a stable
-/// contract that `tools/CMakeLists.txt` already pins down with CTest smoke
-/// tests (`covarray.cli.help`, `covarray.cli.version`).
+/// contract: both always succeed and print to stdout, independent of any
+/// other argument.
 ///
 /// `verify` checks that `<file>` (the project's `N k v^k t` text format, see
 /// covarray/io.hpp) is a covering array:
