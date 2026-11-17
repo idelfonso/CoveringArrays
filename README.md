@@ -1,8 +1,6 @@
 # CoveringArrays
 
-A small C++20 library and CLI for working with covering arrays: construct
-(not yet implemented) and verify that a given array covers every t-way
-combination of values across its columns.
+A C++ library and CLI for manipulating covering arrays.
 
 ## Layout
 
@@ -10,7 +8,9 @@ combination of values across its columns.
   (`array.hpp`), coverage checking (`coverage.hpp`), and the text file format
   (`io.hpp`).
 - `tools/covarray_cli.cpp` — the `covarray_cli` command-line tool.
-- `tests/` — GoogleTest suite (fetched at configure time).
+- `tests/` — GoogleTest suite.
+- `third_party/googletest/` — the vendored GoogleTest sources the test
+  suite builds against.
 - `data/instances/` — pre-built covering array instances for manual checks
   and testing; see `data/README.md`.
 
