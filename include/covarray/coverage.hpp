@@ -27,10 +27,10 @@
 ///
 /// ### Wildcards
 ///
-/// array::wildcard() carries no coverage obligation of its own, which this
-/// verifier reads as "matches any required symbol" — a row with a wildcard
-/// in one of the `t` chosen columns can cover any tuple that agrees with it
-/// on the other columns.
+/// A row with array::wildcard() in any of the `t` chosen columns is ignored
+/// outright for that combination: it covers no tuple at all. Only symbols in
+/// `[0, v-1]` ever satisfy a `v^t` tuple — a wildcard never stands in for
+/// one.
 ///
 /// ### Two report shapes, by design
 ///
@@ -108,8 +108,8 @@ struct verify_result {
 [[nodiscard]] std::string missing_report_filename(const array& a);
 
 /// @brief Writes every combination in `result.missing` to `path`: one block
-/// per deficient combination, naming its columns (0-indexed) and listing
-/// every tuple it fails to cover.
+/// per deficient combination, naming its columns and listing every tuple it
+/// fails to cover.
 /// @throws std::runtime_error if the file cannot be opened.
 void write_missing(const std::filesystem::path& path, const array& a, const verify_result& result);
 

@@ -61,13 +61,13 @@ void print_usage(std::ostream& out) {
       << "                   N<rows>k<columns>v<order>^<columns>t<strength>.missing\n";
 }
 
-// Prints the columns (1-indexed, for a human reader) and one example missing
-// tuple from `combo` — the "uncovered tuple and witnessing columns" the
-// project's verifiers are expected to report, never a bare failure.
+// Prints the columns and one example missing tuple from `combo` — the
+// "uncovered tuple and witnessing columns" the project's verifiers are
+// expected to report, never a bare failure.
 void print_witness(std::ostream& out, const covarray::missing_combination& combo) {
   out << "  columns:";
   for (const std::size_t c : combo.columns) {
-    out << ' ' << (c + 1);
+    out << ' ' << c;
   }
   out << " -- " << combo.tuples.size() << " tuple(s) not covered, e.g.:";
   for (const covarray::symbol_type s : combo.tuples.front()) {
@@ -121,8 +121,8 @@ int run_verify(std::span<const std::string_view> args) {
 
   std::cout << std::string(path) << ": ";
   if (result.is_covering_array) {
-    std::cout << "covering array (CA(" << a.rows() << "; " << a.strength() << ", " << a.columns()
-              << ", " << a.order() << "))\n";
+    std::cout << "covering array CA(" << a.rows() << "; " << a.strength() << ", " << a.columns()
+              << ", " << a.order() << ")\n";
   } else if (all_columns) {
     std::cout << "NOT a covering array -- " << covarray::summarize(result) << '\n';
   } else {

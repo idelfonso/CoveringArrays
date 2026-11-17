@@ -108,8 +108,9 @@ TEST(coverage, CollectMissingRecordsColumnsAndTuples) {
   EXPECT_EQ(combo.tuples.front(), expected_tuple);
 }
 
-TEST(coverage, WildcardMatchesAnyRequiredSymbol) {
-  // Two rows, v = 2: row 0 is all wildcards, which alone covers every pair.
+TEST(coverage, WildcardRowIsIgnored) {
+  // Two rows, v = 2: row 0 has a wildcard and so covers nothing; row 1 only
+  // covers (0, 0). The pair (1, 1) is never covered by either row.
   covarray::array a(2, 2, 2, 2);
   a(0, 0) = a.wildcard();
   a(0, 1) = a.wildcard();
@@ -117,8 +118,9 @@ TEST(coverage, WildcardMatchesAnyRequiredSymbol) {
   a(1, 1) = 0;
 
   const covarray::verify_result result = covarray::verify_fast(a);
-  EXPECT_TRUE(result.is_covering_array);
+  EXPECT_FALSE(result.is_covering_array);
   EXPECT_EQ(result.combinations_checked, 1u);
+  EXPECT_EQ(result.missing_tuples_total, 3u);
 }
 
 TEST(coverage, TupleSpaceOverflowThrows) {

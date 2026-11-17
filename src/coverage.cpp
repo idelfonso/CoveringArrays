@@ -50,15 +50,14 @@ namespace {
   return false;
 }
 
-// Marks every tuple that row `row` covers for the column combination
-// `combo`, given `a`'s columns pre-transposed into `columns_major` (column c
-// occupies columns_major[c * n .. c * n + n)). A row with no wildcard among
-// the chosen columns covers exactly one tuple; one with w wildcards covers
-// every one of the v^w tuples consistent with its non-wildcard entries.
+// Marks the tuple that row `row` covers for the column combination `combo`,
+// given `a`'s columns pre-transposed into `columns_major` (column c occupies
+// columns_major[c * n .. c * n + n)). A row with a wildcard in any of the
+// chosen columns is ignored outright: it covers nothing for this
+// combination. Only symbols in [0, v-1] ever cover a tuple.
 //
-// `tuple_scratch` (size t) and `wildcard_scratch` (capacity t) are owned by
-// the caller and reused across every row and every combination, so this hot
-// loop allocates nothing.
+// `tuple_scratch` (size t) is owned by the caller and reused across every
+// row and every combination, so this hot loop allocates nothing.
 void mark_row(const std::vector<std::size_t>& combo,
               std::size_t row,
               std::size_t n,
@@ -66,53 +65,21 @@ void mark_row(const std::vector<std::size_t>& combo,
               symbol_type wildcard,
               std::size_t v,
               std::vector<symbol_type>& tuple_scratch,
-              std::vector<std::size_t>& wildcard_scratch,
               std::vector<bool>& covered,
               std::size_t& covered_count) {
   const std::size_t t = combo.size();
-  wildcard_scratch.clear();
   for (std::size_t i = 0; i < t; ++i) {
     const symbol_type value = columns_major[(combo[i] * n) + row];
-    tuple_scratch[i] = value;
     if (value == wildcard) {
-      wildcard_scratch.push_back(i);
+      return;
     }
+    tuple_scratch[i] = value;
   }
 
-  if (wildcard_scratch.empty()) {
-    const std::size_t idx = encode_tuple(tuple_scratch, v);
-    if (!covered[idx]) {
-      covered[idx] = true;
-      ++covered_count;
-    }
-    return;
-  }
-
-  // Odometer over every assignment to the wildcard positions: v^w tuples.
-  for (const std::size_t pos : wildcard_scratch) {
-    tuple_scratch[pos] = 0;
-  }
-  while (true) {
-    const std::size_t idx = encode_tuple(tuple_scratch, v);
-    if (!covered[idx]) {
-      covered[idx] = true;
-      ++covered_count;
-    }
-
-    bool carried = true;
-    std::size_t digit = wildcard_scratch.size();
-    while (digit > 0) {
-      --digit;
-      const std::size_t pos = wildcard_scratch[digit];
-      if (++tuple_scratch[pos] < v) {
-        carried = false;
-        break;
-      }
-      tuple_scratch[pos] = 0;
-    }
-    if (carried) {
-      break;
-    }
+  const std::size_t idx = encode_tuple(tuple_scratch, v);
+  if (!covered[idx]) {
+    covered[idx] = true;
+    ++covered_count;
   }
 }
 
@@ -178,8 +145,6 @@ verify_result verify_fast(const array& a, const verify_options& options) {
 
   std::vector<bool> covered(tuple_space);
   std::vector<symbol_type> tuple_scratch(t);
-  std::vector<std::size_t> wildcard_scratch;
-  wildcard_scratch.reserve(t);
 
   bool has_combo = true;
   while (has_combo) {
@@ -197,7 +162,6 @@ verify_result verify_fast(const array& a, const verify_options& options) {
                wildcard,
                v,
                tuple_scratch,
-               wildcard_scratch,
                covered,
                covered_count);
     }
