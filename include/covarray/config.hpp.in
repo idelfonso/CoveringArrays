@@ -1,0 +1,12 @@
+// covarray/config.hpp — GENERATED FILE, DO NOT EDIT.
+//
+// Produced by CMake (configure_file(), see CMakeLists.txt) from this .in
+// template. It exists only so tools/covarray_cli.cpp can print a version
+// string without hardcoding it in source.
+
+#ifndef COVARRAY_CONFIG_HPP
+#define COVARRAY_CONFIG_HPP
+
+#define COVARRAY_VERSION_STRING "@COVARRAY_VERSION@"
+
+#endif // COVARRAY_CONFIG_HPP
