@@ -47,7 +47,7 @@ endif()
 #  Warnings
 #
 #  One INTERFACE library carrying our warning flags, linked PRIVATE by every
-#  target below. PRIVATE is what keeps these flags off GoogleTest (fetched
+#  target below. PRIVATE is what keeps these flags off GoogleTest (vendored
 #  below) and off any future consumer that links against this project.
 #  Hardcoded, not probed with check_cxx_compiler_flag(): we only ever build
 #  with GCC, and every flag here is a GCC flag.
@@ -116,22 +116,22 @@ add_executable(covarray_cli tools/covarray_cli.cpp)
 target_link_libraries(covarray_cli PRIVATE covarray covarray_warnings)
 
 # -----------------------------------------------------------------------------
-#  Tests (GoogleTest, fetched at configure time)
+#  Tests (GoogleTest, vendored under third_party/googletest)
+#
+#  Vendored rather than fetched with FetchContent: this project is built in
+#  network-restricted sandboxes, where a GitHub clone at configure time would
+#  just fail. third_party/googletest/ holds the subset of the GoogleTest
+#  v1.17.0 source tree needed to build the gtest/gtest_main targets (its own
+#  test suite, samples, and docs are left out — nothing here uses them).
 # -----------------------------------------------------------------------------
 option(COVARRAY_BUILD_TESTS "Build the GoogleTest suite and register it with CTest" ON)
 
 if(COVARRAY_BUILD_TESTS)
   enable_testing()
 
-  include(FetchContent)
   set(INSTALL_GTEST OFF CACHE BOOL "" FORCE) # we never `cmake --install` this project
   set(BUILD_GMOCK    OFF CACHE BOOL "" FORCE) # gmock is unused; skip compiling it
-  FetchContent_Declare(googletest
-    GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG        v1.17.0
-    GIT_SHALLOW    TRUE
-  )
-  FetchContent_MakeAvailable(googletest)
+  add_subdirectory(third_party/googletest)
 
   add_executable(covarray_tests
     tests/test_array.cpp
