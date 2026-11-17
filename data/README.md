@@ -34,16 +34,17 @@ literature, a specific generator run, etc.).
 
 ## NIST instances
 
-20 of the files here (named `ca.<t>.<v>^<k>.txt`, e.g. `ca.2.3^3.txt`) were
+Some of the files here (named `ca.<t>.<v>^<k>.txt`, e.g. `ca.2.3^3.txt`) were
 downloaded from the NIST covering array tables
 (https://math.nist.gov/coveringarrays/, IPOG-F-generated arrays) and
 verified with `covarray_cli verify` before being committed. They keep their
 original NIST filename rather than this project's `CA_N...` convention
 above, so the source of each is unambiguous; `<t>` and `<v>` are the
-strength and order, and `<k>` (after the `^`) is the column count. They span
-the full range of all four parameters: strength `t` = 2 through 6, order
-`v` = 2 through 6, column count `k` = 3 through 96, and row count `N` = 6
-through 5884.
+strength and order, and `<k>` (after the `^`) is the column count. They
+vary across all four covering array parameters (strength `t`, order `v`,
+column count `k`, and row count `N`); see the individual filenames and the
+`c` comment line at the top of each file for the specifics of a given
+instance.
 
 Their content was converted from NIST's native format into this project's
 format (see "File format" above) in two ways: a header line stating `N k
