@@ -98,6 +98,7 @@ configure_file(
 # -----------------------------------------------------------------------------
 add_library(covarray STATIC
   src/array.cpp
+  src/canonical.cpp
   src/coverage.cpp
   src/io.cpp
 )
@@ -135,6 +136,7 @@ if(COVARRAY_BUILD_TESTS)
 
   add_executable(covarray_tests
     tests/test_array.cpp
+    tests/test_canonical.cpp
     tests/test_coverage.cpp
     tests/test_io.cpp
   )
