@@ -15,15 +15,31 @@
 // canonical forms are equal.
 //
 // canonical_form() is exact, not a heuristic, but it is also genuinely
-// O(N!): for a *fixed* row order, the optimal column order (sort
-// ascending -- every column has the same length, so comparing
-// concatenations of them reduces to comparing the columns themselves)
-// and the optimal per-column symbol relabeling (greedy first-occurrence
-// labeling) both have a closed form, so the only thing actually searched
-// is the row permutation -- see src/canonical.cpp for the argument. That
-// is intentional: this is meant for the small (single- to
-// low-double-digit N) arrays an exhaustive equivalence-class enumeration
-// produces, not for anything covarray::sa_construct() would build.
+// factorial-time, via one of two dual algorithms (picked per call,
+// whichever is cheaper for that array's shape -- see src/canonical.cpp):
+//
+//   - row search, O(N!): for a *fixed* row order, the optimal column
+//     order (sort ascending -- every column has the same length, so
+//     comparing concatenations of them reduces to comparing the columns
+//     themselves) and the optimal per-column symbol relabeling (greedy
+//     first-occurrence labeling) both have a closed form, so the only
+//     thing actually searched is the row permutation.
+//   - column search, O(k! * v!^k): symbol permutation is defined per
+//     column, not per row, so unlike the row-search case there is no way
+//     to fix the per-column symbol maps without a row order already in
+//     hand to make "first occurrence" meaningful -- and no row order is
+//     in hand yet, since finding one is the point. So column order and
+//     every per-column symbol map are searched together; only once both
+//     are fixed does row order get a closed form (sort the now
+//     fully-determined rows ascending).
+//
+// Which one runs is chosen by comparing N! against k! * v!^k (so it is
+// meant for whichever of N or k is small -- a covering array with far
+// more rows than columns and few symbols, or the reverse, is the common
+// case this picks up), never both. This is still meant for the small
+// arrays an exhaustive equivalence-class enumeration produces, not for
+// anything covarray::sa_construct() would build at scale in both
+// dimensions.
 #ifndef COVARRAY_CANONICAL_HPP
 #define COVARRAY_CANONICAL_HPP
 

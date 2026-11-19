@@ -60,12 +60,27 @@ TEST(canonical_form, StructurallyDifferentArraysAreNotIsomorphic) {
     // can turn any arrangement into any other with the same multiset of
     // per-symbol counts, and only those. `a` has three 0s and one 1; `c`
     // has two of each -- different count multisets, so these cannot be
-    // isomorphic.
+    // isomorphic. Shape (N=4, k=1, v=2) also makes canonical_form() pick
+    // the column-search algorithm (k! * v!^k = 2 beats N! = 24), so this
+    // doubles as that algorithm's negative-case coverage.
     const covarray::array a = make_array(2, 1, {{0}, {0}, {0}, {1}});
     const covarray::array c = make_array(2, 1, {{0}, {0}, {1}, {1}});
 
     EXPECT_NE(covarray::canonical_form(a), covarray::canonical_form(c));
     EXPECT_FALSE(covarray::isomorphic(a, c));
+}
+
+TEST(canonical_form, ColumnSearchAlgorithmDetectsIsomorphism) {
+    // Shape (N=6, k=2, v=2) makes canonical_form() pick the column-search
+    // algorithm (k! * v!^k = 8 beats N! = 720) -- this is that algorithm's
+    // positive-case coverage, mirroring CombinedPermutationsDoNotChangeIt
+    // above but for a shape where row-search would be the expensive one.
+    const covarray::array a = make_array(2, 1, {{0, 0}, {0, 1}, {1, 0}, {1, 1}, {0, 0}, {1, 1}});
+    // Reverse the rows, swap the two columns, and flip symbols 0 <-> 1.
+    const covarray::array b = make_array(2, 1, {{0, 0}, {1, 1}, {0, 0}, {1, 0}, {0, 1}, {1, 1}});
+
+    EXPECT_EQ(covarray::canonical_form(a), covarray::canonical_form(b));
+    EXPECT_TRUE(covarray::isomorphic(a, b));
 }
 
 TEST(canonical_form, WildcardIsNeverRelabeled) {
