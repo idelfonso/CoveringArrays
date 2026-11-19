@@ -5,8 +5,9 @@ A C++ library and CLI for manipulating covering arrays.
 ## Layout
 
 - `include/covarray/`, `src/` — the `covarray` library: the array type
-  (`array.hpp`), coverage checking (`coverage.hpp`), and the text file format
-  (`io.hpp`).
+  (`array.hpp`), coverage checking (`coverage.hpp`), the text file format
+  (`io.hpp`), and the exact Kleitman-Spencer construction for strength-2,
+  2-symbol covering arrays (`kleitman_spencer.hpp`).
 - `tools/covarray_cli.cpp` — the `covarray_cli` command-line tool.
 - `tests/` — GoogleTest suite.
 - `third_party/googletest/` — the vendored GoogleTest sources the test
@@ -28,6 +29,9 @@ GCC/g++ is the only supported compiler.
 
 ```
 covarray_cli verify <file> [--all-columns] [--write-missing]
+covarray_cli kleitman-spencer-rows <k>
+covarray_cli kleitman-spencer-construct <k> <outfile>
+covarray_cli kleitman-spencer-max-columns <n> <outfile>
 covarray_cli --help
 covarray_cli --version
 ```
@@ -46,4 +50,24 @@ Example:
 
 ```bash
 ./build/covarray_cli verify data/instances/CA_N4_k3_v2_t2.txt
+```
+
+The three `kleitman-spencer-*` commands build exact, optimal
+`CA(N; 2, k, 2)` covering arrays (strength 2, 2 symbols), after Kleitman
+and Spencer's 1973 result -- see `include/covarray/kleitman_spencer.hpp`.
+Exit status: `0` on success, `2` on a usage or parse error (including
+`k < 2` or `n < 4`, which have no valid array to build).
+
+- `kleitman-spencer-rows <k>` prints the fewest rows any `CA(N; 2, k, 2)`
+  can have.
+- `kleitman-spencer-construct <k> <outfile>` writes a `CA(N; 2, k, 2)`
+  with that many rows.
+- `kleitman-spencer-max-columns <n> <outfile>` writes a `CA(n; 2, k, 2)`
+  with the most columns any such array can have in `n` rows.
+
+Example:
+
+```bash
+./build/covarray_cli kleitman-spencer-rows 20            # -> 8
+./build/covarray_cli kleitman-spencer-construct 20 ca.txt
 ```

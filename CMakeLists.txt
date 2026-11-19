@@ -100,6 +100,7 @@ add_library(covarray STATIC
   src/array.cpp
   src/coverage.cpp
   src/io.cpp
+  src/kleitman_spencer.cpp
 )
 
 target_include_directories(covarray PUBLIC
@@ -137,6 +138,7 @@ if(COVARRAY_BUILD_TESTS)
     tests/test_array.cpp
     tests/test_coverage.cpp
     tests/test_io.cpp
+    tests/test_kleitman_spencer.cpp
   )
   target_link_libraries(covarray_tests PRIVATE covarray gtest_main covarray_warnings)
 
