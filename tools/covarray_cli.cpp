@@ -1,13 +1,17 @@
 // `covarray_cli` — thin command-line front end over the library.
 //
-// Today this has two subcommands:
+// Today this has five subcommands:
 //
 //   covarray_cli verify <file> [--all-columns] [--write-missing]
 //   covarray_cli check-classes <dir> --expect <count>
+//   covarray_cli kleitman-spencer-rows <k>
+//   covarray_cli kleitman-spencer-construct <k> <outfile>
+//   covarray_cli kleitman-spencer-max-columns <n> <outfile>
 //
-// built on covarray::verify_fast() and covarray::canonical_form()
-// respectively. `--help` and `--version` are a stable contract: both
-// always succeed and print to stdout, independent of any other argument.
+// built on covarray::verify_fast(), covarray::canonical_form(), and
+// covarray/kleitman_spencer.hpp respectively. `--help` and `--version`
+// are a stable contract: both always succeed and print to stdout,
+// independent of any other argument.
 //
 // `verify` checks that `<file>` (the project's `N k v^k t` text format, see
 // covarray/io.hpp) is a covering array:
@@ -41,11 +45,21 @@
 //
 // Exit status for check-classes: `0` if every check passed, `1` if any
 // did not, `2` on a usage error.
+//
+// The three `kleitman-spencer-*` subcommands are thin wrappers over
+// covarray::kleitman_spencer_optimal_rows(), covarray::kleitman_spencer_
+// construct(), and covarray::kleitman_spencer_construct_max_columns()
+// respectively -- see include/covarray/kleitman_spencer.hpp for what
+// they compute and why it is exact (not heuristic) for this one
+// parameter point, strength 2 over 2 symbols. Exit status: `0` on
+// success, `2` on a usage or parse error (including the k < 2 / n < 4
+// domain errors those functions themselves throw on).
 #include <covarray/array.hpp>
 #include <covarray/canonical.hpp>
 #include <covarray/config.hpp>
 #include <covarray/coverage.hpp>
 #include <covarray/io.hpp>
+#include <covarray/kleitman_spencer.hpp>
 
 #include <charconv>
 #include <exception>
@@ -67,6 +81,9 @@ void print_usage(std::ostream& out) {
         << "Usage:\n"
         << "  covarray_cli verify <file> [--all-columns] [--write-missing]\n"
         << "  covarray_cli check-classes <dir> --expect <count>\n"
+        << "  covarray_cli kleitman-spencer-rows <k>\n"
+        << "  covarray_cli kleitman-spencer-construct <k> <outfile>\n"
+        << "  covarray_cli kleitman-spencer-max-columns <n> <outfile>\n"
         << "  covarray_cli --help\n"
         << "  covarray_cli --version\n\n"
         << "verify checks that <file> (the project's 'N k v^k t' text format) is a\n"
@@ -85,7 +102,18 @@ void print_usage(std::ostream& out) {
         << "turns one into the other; see include/covarray/canonical.hpp. Every problem\n"
         << "found is reported, not just the first. Exit status: 0 if every check\n"
         << "passed, 1 if any did not, 2 on a usage error (bad arguments, <dir> missing\n"
-        << "or unreadable, count.txt missing or not an integer).\n";
+        << "or unreadable, count.txt missing or not an integer).\n\n"
+        << "The three kleitman-spencer-* commands build exact, optimal CA(N; 2, k, 2)\n"
+        << "covering arrays (strength 2, 2 symbols) -- see\n"
+        << "include/covarray/kleitman_spencer.hpp. Exit status: 0 on success, 2 on a\n"
+        << "usage or parse error.\n\n"
+        << "  kleitman-spencer-rows <k>\n"
+        << "      print the fewest rows any CA(N; 2, k, 2) can have.\n"
+        << "  kleitman-spencer-construct <k> <outfile>\n"
+        << "      write a CA(N; 2, k, 2) with that many rows.\n"
+        << "  kleitman-spencer-max-columns <n> <outfile>\n"
+        << "      write a CA(n; 2, k, 2) with the most columns any such array can have\n"
+        << "      in n rows.\n";
 }
 
 // Parses `text` in full as a base-10 unsigned integer of type T; returns
@@ -296,6 +324,90 @@ int run_check_classes(std::span<const std::string_view> args) {
     return ok ? 0 : 1;
 }
 
+int run_kleitman_spencer_rows(std::span<const std::string_view> args) {
+    if (args.size() != 1) {
+        std::cerr << "covarray: kleitman-spencer-rows needs <k>\n";
+        return 2;
+    }
+    std::size_t k = 0;
+    if (!parse_uint(args[0], k)) {
+        std::cerr << "covarray: invalid k value '" << args[0] << "'\n";
+        return 2;
+    }
+
+    try {
+        std::cout << covarray::kleitman_spencer_optimal_rows(k) << '\n';
+    } catch (const std::exception& e) {
+        std::cerr << "covarray: " << e.what() << '\n';
+        return 2;
+    }
+    return 0;
+}
+
+int run_kleitman_spencer_construct(std::span<const std::string_view> args) {
+    if (args.size() != 2) {
+        std::cerr << "covarray: kleitman-spencer-construct needs <k> <outfile>\n";
+        return 2;
+    }
+    std::size_t k = 0;
+    if (!parse_uint(args[0], k)) {
+        std::cerr << "covarray: invalid k value '" << args[0] << "'\n";
+        return 2;
+    }
+    const std::string_view out_path = args[1];
+
+    covarray::array result;
+    try {
+        result = covarray::kleitman_spencer_construct(k);
+    } catch (const std::exception& e) {
+        std::cerr << "covarray: " << e.what() << '\n';
+        return 2;
+    }
+
+    try {
+        covarray::write_array(std::filesystem::path(out_path), result);
+    } catch (const std::exception& e) {
+        std::cerr << "covarray: " << e.what() << '\n';
+        return 2;
+    }
+
+    std::cout << "covarray: wrote " << out_path << " -- CA(" << result.rows() << "; 2, " << k
+               << ", 2)\n";
+    return 0;
+}
+
+int run_kleitman_spencer_max_columns(std::span<const std::string_view> args) {
+    if (args.size() != 2) {
+        std::cerr << "covarray: kleitman-spencer-max-columns needs <n> <outfile>\n";
+        return 2;
+    }
+    std::size_t n = 0;
+    if (!parse_uint(args[0], n)) {
+        std::cerr << "covarray: invalid n value '" << args[0] << "'\n";
+        return 2;
+    }
+    const std::string_view out_path = args[1];
+
+    covarray::array result;
+    try {
+        result = covarray::kleitman_spencer_construct_max_columns(n);
+    } catch (const std::exception& e) {
+        std::cerr << "covarray: " << e.what() << '\n';
+        return 2;
+    }
+
+    try {
+        covarray::write_array(std::filesystem::path(out_path), result);
+    } catch (const std::exception& e) {
+        std::cerr << "covarray: " << e.what() << '\n';
+        return 2;
+    }
+
+    std::cout << "covarray: wrote " << out_path << " -- CA(" << n << "; 2, " << result.columns()
+               << ", 2)\n";
+    return 0;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -314,6 +426,15 @@ int main(int argc, char** argv) {
     }
     if (args.front() == "check-classes") {
         return run_check_classes(std::span(args).subspan(1));
+    }
+    if (args.front() == "kleitman-spencer-rows") {
+        return run_kleitman_spencer_rows(std::span(args).subspan(1));
+    }
+    if (args.front() == "kleitman-spencer-construct") {
+        return run_kleitman_spencer_construct(std::span(args).subspan(1));
+    }
+    if (args.front() == "kleitman-spencer-max-columns") {
+        return run_kleitman_spencer_max_columns(std::span(args).subspan(1));
     }
 
     std::cerr << "covarray: unknown command '" << args.front() << "'\n\n";
