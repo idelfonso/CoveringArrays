@@ -1,3 +1,19 @@
+# Known-optimal covering array sizes CA(N; t, k, v), for comparing
+# constructors' output against.
+#
+# Each row's N is the smallest row count for which a CA(N; t, k, v) is
+# known to exist -- established by exhaustive search over isomorphism
+# classes, not derived from any general constructive family with a
+# closed-form optimal N. See data/orderly_algorithm_results.txt: its
+# Classes column is > 0 at this (t, k, v)'s N and 0 at N - 1, which is
+# exactly what shows both that N suffices and that N - 1 does not.
+#
+# (t, k, v) = (2, k, 2) is deliberately absent: that family already has
+# a closed-form optimal N (see covarray::kleitman_spencer_optimal_rows()
+# / include/covarray/kleitman_spencer.hpp), so no exhaustive search was
+# needed or run for it.
+#
+# Format: N t k v
 N	t	k	v
 8	3	3	2
 8	3	4	2
