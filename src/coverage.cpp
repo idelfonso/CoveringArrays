@@ -3,9 +3,9 @@
 #include <covarray/array.hpp>
 
 #include <algorithm>
+#include <format>
 #include <fstream>
 #include <limits>
-#include <sstream>
 #include <stdexcept>
 
 namespace covarray {
@@ -179,27 +179,24 @@ verify_result verify_fast(const array& a, const verify_options& options) {
 }
 
 std::string summarize(const verify_result& result) {
-    std::ostringstream out;
-    out << result.combinations_with_missing << " of " << result.combinations_checked
-        << " column combination" << (result.combinations_checked == 1 ? "" : "s")
-        << " missing at least one tuple, " << result.missing_tuples_total << " tuple"
-        << (result.missing_tuples_total == 1 ? "" : "s") << " missing in total";
-    return out.str();
+    return std::format(
+        "{} of {} column combination{} missing at least one tuple, {} tuple{} missing in total",
+        result.combinations_with_missing,
+        result.combinations_checked,
+        result.combinations_checked == 1 ? "" : "s",
+        result.missing_tuples_total,
+        result.missing_tuples_total == 1 ? "" : "s");
 }
 
 std::string missing_report_filename(const array& a) {
-    std::ostringstream name;
-    name << 'N' << a.rows() << 'k' << a.columns() << 'v' << a.order() << '^' << a.columns() << 't'
-         << a.strength() << ".missing";
-    return name.str();
+    return std::format(
+        "N{}k{}v{}^{}t{}.missing", a.rows(), a.columns(), a.order(), a.columns(), a.strength());
 }
 
 void write_missing(const std::filesystem::path& path, const array& a, const verify_result& result) {
     std::ofstream out(path);
     if (!out) {
-        std::ostringstream msg;
-        msg << "covarray: cannot open '" << path.string() << "' for writing";
-        throw std::runtime_error(msg.str());
+        throw std::runtime_error(std::format("covarray: cannot open '{}' for writing", path.string()));
     }
 
     out << "# covarray missing-tuple report\n"

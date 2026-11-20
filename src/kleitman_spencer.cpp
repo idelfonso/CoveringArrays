@@ -2,9 +2,9 @@
 
 #include <covarray/array.hpp>
 
+#include <format>
 #include <limits>
 #include <numeric>
-#include <sstream>
 #include <stdexcept>
 #include <vector>
 
@@ -65,9 +65,8 @@ namespace {
     }
 
     if (value > std::numeric_limits<std::size_t>::max()) {
-        std::ostringstream msg;
-        msg << "covarray::kleitman_spencer: C(" << n << ", " << r << ") overflows std::size_t";
-        throw std::overflow_error(msg.str());
+        throw std::overflow_error(
+            std::format("covarray::kleitman_spencer: C({}, {}) overflows std::size_t", n, r));
     }
     return static_cast<std::size_t>(value);
 }

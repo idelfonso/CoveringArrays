@@ -2,7 +2,9 @@
 
 #include <covarray/array.hpp>
 
+#include <charconv>
 #include <deque>
+#include <format>
 #include <fstream>
 #include <istream>
 #include <ostream>
@@ -46,9 +48,8 @@ class token_reader {
     [[nodiscard]] std::string next(std::string_view expected) {
         while (pending_.empty()) {
             if (!refill()) {
-                std::ostringstream msg;
-                msg << "covarray: unexpected end of input, expected " << expected;
-                throw std::runtime_error(msg.str());
+                throw std::runtime_error(
+                    std::format("covarray: unexpected end of input, expected {}", expected));
             }
         }
         std::string token = std::move(pending_.front());
@@ -89,18 +90,11 @@ class token_reader {
 [[nodiscard]] std::size_t parse_field(const std::string& token,
                                       std::string_view field,
                                       std::size_t line_no) {
-    std::size_t pos = 0;
     long long value = -1;
-    try {
-        value = std::stoll(token, &pos);
-    } catch (const std::exception&) {
-        pos = 0;
-    }
-    if (pos != token.size() || value < 0) {
-        std::ostringstream msg;
-        msg << "covarray: line " << line_no << ": field '" << field
-            << "' is not a non-negative integer: '" << token << "'";
-        throw std::runtime_error(msg.str());
+    const auto [ptr, ec] = std::from_chars(token.data(), token.data() + token.size(), value);
+    if (ec != std::errc{} || ptr != token.data() + token.size() || value < 0) {
+        throw std::runtime_error(std::format(
+            "covarray: line {}: field '{}' is not a non-negative integer: '{}'", line_no, field, token));
     }
     return static_cast<std::size_t>(value);
 }
@@ -120,19 +114,18 @@ array read_array(std::istream& in) {
     const std::size_t vk_line = tokens.line();
     const std::size_t caret = vk_token.find('^');
     if (caret == std::string::npos) {
-        std::ostringstream msg;
-        msg << "covarray: line " << vk_line << ": header field 3 must be 'v^k', got '" << vk_token
-            << "'";
-        throw std::runtime_error(msg.str());
+        throw std::runtime_error(std::format(
+            "covarray: line {}: header field 3 must be 'v^k', got '{}'", vk_line, vk_token));
     }
     const std::size_t v = parse_field(vk_token.substr(0, caret), "v", vk_line);
     const std::size_t exponent =
         parse_field(vk_token.substr(caret + 1), "exponent of v^k", vk_line);
     if (exponent != k) {
-        std::ostringstream msg;
-        msg << "covarray: line " << vk_line << ": exponent in 'v^k' (" << exponent
-            << ") does not match the column count k (" << k << ")";
-        throw std::runtime_error(msg.str());
+        throw std::runtime_error(std::format(
+            "covarray: line {}: exponent in 'v^k' ({}) does not match the column count k ({})",
+            vk_line,
+            exponent,
+            k));
     }
 
     const std::string t_token = tokens.next("t");
@@ -141,30 +134,23 @@ array read_array(std::istream& in) {
     array result(n, k, v, t);
     for (std::size_t r = 0; r < n; ++r) {
         for (std::size_t c = 0; c < k; ++c) {
-            std::ostringstream expected;
-            expected << "matrix entry (row " << r << ", column " << c << ")";
-            const std::string token = tokens.next(expected.str());
+            const std::string token = tokens.next(std::format("matrix entry (row {}, column {})", r, c));
             const std::size_t entry_line = tokens.line();
 
-            std::size_t pos = 0;
             long long value = 0;
-            bool numeric = true;
-            try {
-                value = std::stoll(token, &pos);
-            } catch (const std::exception&) {
-                numeric = false;
-            }
-            if (!numeric || pos != token.size()) {
-                std::ostringstream msg;
-                msg << "covarray: line " << entry_line << ": row " << r << ", column " << c
-                    << ": not an integer: '" << token << "'";
-                throw std::runtime_error(msg.str());
+            const auto [ptr, ec] = std::from_chars(token.data(), token.data() + token.size(), value);
+            if (ec != std::errc{} || ptr != token.data() + token.size()) {
+                throw std::runtime_error(std::format(
+                    "covarray: line {}: row {}, column {}: not an integer: '{}'", entry_line, r, c, token));
             }
             if (value < 0 || value > static_cast<long long>(v)) {
-                std::ostringstream msg;
-                msg << "covarray: line " << entry_line << ": row " << r << ", column " << c
-                    << ": symbol " << value << " is out of range [0, " << v << "]";
-                throw std::invalid_argument(msg.str());
+                throw std::invalid_argument(std::format(
+                    "covarray: line {}: row {}, column {}: symbol {} is out of range [0, {}]",
+                    entry_line,
+                    r,
+                    c,
+                    value,
+                    v));
             }
             result(r, c) = static_cast<symbol_type>(value);
         }
@@ -175,9 +161,7 @@ array read_array(std::istream& in) {
 array read_array(const std::filesystem::path& path) {
     std::ifstream in(path);
     if (!in) {
-        std::ostringstream msg;
-        msg << "covarray: cannot open '" << path.string() << "' for reading";
-        throw std::runtime_error(msg.str());
+        throw std::runtime_error(std::format("covarray: cannot open '{}' for reading", path.string()));
     }
     return read_array(in);
 }
@@ -200,9 +184,7 @@ void write_array(std::ostream& out, const array& a) {
 void write_array(const std::filesystem::path& path, const array& a) {
     std::ofstream out(path);
     if (!out) {
-        std::ostringstream msg;
-        msg << "covarray: cannot open '" << path.string() << "' for writing";
-        throw std::runtime_error(msg.str());
+        throw std::runtime_error(std::format("covarray: cannot open '{}' for writing", path.string()));
     }
     write_array(out, a);
 }

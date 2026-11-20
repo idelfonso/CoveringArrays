@@ -1,6 +1,6 @@
 #include "covarray/array.hpp"
 
-#include <sstream>
+#include <format>
 
 namespace covarray {
 
@@ -8,9 +8,8 @@ void check_dimensions([[maybe_unused]] std::size_t n, std::size_t k, std::size_t
     // N carries no constraint of its own; every value including 0 is legal.
 
     if (v < 1 || v > max_order) {
-        std::ostringstream msg;
-        msg << "covarray::array: order v = " << v << " is out of range [1, " << max_order << "]";
-        throw std::invalid_argument(msg.str());
+        throw std::invalid_argument(
+            std::format("covarray::array: order v = {} is out of range [1, {}]", v, max_order));
     }
 
     if (k == 0) {
@@ -21,9 +20,8 @@ void check_dimensions([[maybe_unused]] std::size_t n, std::size_t k, std::size_t
     }
 
     if (t > k) {
-        std::ostringstream msg;
-        msg << "covarray::array: strength t = " << t << " exceeds column count k = " << k;
-        throw std::invalid_argument(msg.str());
+        throw std::invalid_argument(
+            std::format("covarray::array: strength t = {} exceeds column count k = {}", t, k));
     }
 }
 
@@ -34,10 +32,8 @@ array::array(std::size_t n, std::size_t k, std::size_t v, std::size_t t)
 
 symbol_type& array::at(std::size_t row, std::size_t col) {
     if (row < 0 || row >= n_ || col < 0 || col >= k_) {
-        std::ostringstream msg;
-        msg << "covarray::array::at: index (" << row << ", " << col << ") out of range for a " << n_
-            << " x " << k_ << " array";
-        throw std::out_of_range(msg.str());
+        throw std::out_of_range(std::format(
+            "covarray::array::at: index ({}, {}) out of range for a {} x {} array", row, col, n_, k_));
     }
     return data_[(row * k_) + col];
 }
@@ -64,11 +60,12 @@ void array::validate_symbols() const {
     if (!violation) {
         return;
     }
-    std::ostringstream msg;
-    msg << "covarray::array: symbol " << static_cast<unsigned>(violation->value) << " at (row "
-        << violation->row << ", column " << violation->column << ") is out of range [0, " << v_
-        << "]";
-    throw std::invalid_argument(msg.str());
+    throw std::invalid_argument(std::format(
+        "covarray::array: symbol {} at (row {}, column {}) is out of range [0, {}]",
+        static_cast<unsigned>(violation->value),
+        violation->row,
+        violation->column,
+        v_));
 }
 
 }  // namespace covarray

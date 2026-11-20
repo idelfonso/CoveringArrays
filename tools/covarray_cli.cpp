@@ -90,11 +90,10 @@
 #include <charconv>
 #include <exception>
 #include <filesystem>
+#include <format>
 #include <fstream>
-#include <iomanip>
 #include <iostream>
 #include <optional>
-#include <sstream>
 #include <span>
 #include <string>
 #include <string_view>
@@ -173,11 +172,7 @@ template <typename T>
 
 // "class_0000.txt", "class_0001.txt", ... -- the naming convention
 // check-classes expects an equivalence-class library's files to follow.
-[[nodiscard]] std::string class_filename(std::size_t index) {
-    std::ostringstream name;
-    name << "class_" << std::setw(4) << std::setfill('0') << index << ".txt";
-    return name.str();
-}
+[[nodiscard]] std::string class_filename(std::size_t index) { return std::format("class_{:04}.txt", index); }
 
 // Prints the columns and one example missing tuple from `combo` — the
 // "uncovered tuple and witnessing columns" the project's verifiers are
