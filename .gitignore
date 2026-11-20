@@ -13,6 +13,9 @@ compile_commands.json
 # Per-run output from the CLI's --write-missing
 *.missing
 
+# Per-run output from the CLI's construct/kleitman-spencer-* commands
+data/output/
+
 # Editor/IDE
 .vscode/
 .idea/
