@@ -1,17 +1,19 @@
 // `covarray_cli` — thin command-line front end over the library.
 //
-// Today this has five subcommands:
+// Today this has seven subcommands:
 //
 //   covarray_cli verify <file> [--all-columns] [--write-missing]
 //   covarray_cli check-classes <dir> --expect <count>
+//   covarray_cli canonize <file> [--column-major] [--write <outfile>]
+//   covarray_cli is-canonical <file>
 //   covarray_cli kleitman-spencer-rows <k>
 //   covarray_cli kleitman-spencer-construct <k> <outfile>
 //   covarray_cli kleitman-spencer-max-columns <n> <outfile>
 //
-// built on covarray::verify_fast(), covarray::canonical_form(), and
-// covarray/kleitman_spencer.hpp respectively. `--help` and `--version`
-// are a stable contract: both always succeed and print to stdout,
-// independent of any other argument.
+// built on covarray::verify_fast(), covarray::canonical_form(),
+// covarray::is_canonical(), and covarray/kleitman_spencer.hpp
+// respectively. `--help` and `--version` are a stable contract: both
+// always succeed and print to stdout, independent of any other argument.
 //
 // `verify` checks that `<file>` (the project's `N k v^k t` text format, see
 // covarray/io.hpp) is a covering array:
@@ -45,6 +47,31 @@
 //
 // Exit status for check-classes: `0` if every check passed, `1` if any
 // did not, `2` on a usage error.
+//
+// `canonize` and `is-canonical` both read `<file>` (the project's array
+// text format) and run covarray::canonical_form() / covarray::is_canonical()
+// on it -- see include/covarray/canonical.hpp for exactly what "canonical"
+// means here (invariant under row permutation, column permutation, and
+// independent per-column symbol relabeling) and why both are
+// factorial-time: O(k! * v!^k), with no N in it -- fine for the small,
+// few-columns per-class arrays check-classes deals with, but can hang on
+// anything with more than a handful of columns or symbols -- there is no
+// size guard here, so pick <file> accordingly.
+//
+// `canonize` prints canonical_form(a)'s entries, space-separated,
+// row-major (row 0's k entries, then row 1's, ...) -- this is
+// canonical_form()'s own output, not another covering array text file.
+// `--column-major` prints canonical_form_column_major(a) instead (column
+// 0's N entries, then column 1's, ...). `--write <outfile>` additionally
+// writes covarray::canonicalize(a) -- a genuine covering array, not a
+// flattening -- to <outfile> in the project's standard `N k v^k t` text
+// format (see covarray/io.hpp), independent of whether --column-major was
+// given (that flag only affects what gets printed to stdout). Exit
+// status: 0 on success, 2 on a usage or parse error.
+//
+// `is-canonical` prints "true" or "false": whether <file>'s array already
+// equals its own canonical form. Exit status: 0 if true, 1 if false, 2 on
+// a usage or parse error.
 //
 // The three `kleitman-spencer-*` subcommands are thin wrappers over
 // covarray::kleitman_spencer_optimal_rows(), covarray::kleitman_spencer_
@@ -81,6 +108,8 @@ void print_usage(std::ostream& out) {
         << "Usage:\n"
         << "  covarray_cli verify <file> [--all-columns] [--write-missing]\n"
         << "  covarray_cli check-classes <dir> --expect <count>\n"
+        << "  covarray_cli canonize <file> [--column-major] [--write <outfile>]\n"
+        << "  covarray_cli is-canonical <file>\n"
         << "  covarray_cli kleitman-spencer-rows <k>\n"
         << "  covarray_cli kleitman-spencer-construct <k> <outfile>\n"
         << "  covarray_cli kleitman-spencer-max-columns <n> <outfile>\n"
@@ -103,6 +132,23 @@ void print_usage(std::ostream& out) {
         << "found is reported, not just the first. Exit status: 0 if every check\n"
         << "passed, 1 if any did not, 2 on a usage error (bad arguments, <dir> missing\n"
         << "or unreadable, count.txt missing or not an integer).\n\n"
+        << "canonize and is-canonical both read <file> (the project's array text\n"
+        << "format) and run covarray::canonical_form() / covarray::is_canonical() on\n"
+        << "it -- see include/covarray/canonical.hpp for what 'canonical' means here\n"
+        << "(invariant under row permutation, column permutation, and independent\n"
+        << "per-column symbol relabeling) and note both are factorial-time, with no\n"
+        << "size guard -- fine for small arrays, but can hang on large ones.\n\n"
+        << "  canonize <file> [--column-major] [--write <outfile>]\n"
+        << "      print canonical_form(<file>)'s entries, space-separated, row-major.\n"
+        << "      This is canonical_form()'s own flat output, not another covering\n"
+        << "      array text file. --column-major prints canonical_form_column_major()\n"
+        << "      instead. --write <outfile> additionally writes the canonicalized\n"
+        << "      array itself to <outfile>, in the project's standard array text\n"
+        << "      format. Exit status: 0 on success, 2 on a usage or parse error.\n"
+        << "  is-canonical <file>\n"
+        << "      print 'true' or 'false': whether <file>'s array already equals its\n"
+        << "      own canonical form. Exit status: 0 if true, 1 if false, 2 on a\n"
+        << "      usage or parse error.\n\n"
         << "The three kleitman-spencer-* commands build exact, optimal CA(N; 2, k, 2)\n"
         << "covering arrays (strength 2, 2 symbols) -- see\n"
         << "include/covarray/kleitman_spencer.hpp. Exit status: 0 on success, 2 on a\n"
@@ -324,6 +370,97 @@ int run_check_classes(std::span<const std::string_view> args) {
     return ok ? 0 : 1;
 }
 
+// Used by run_is_canonical(), which takes exactly one positional
+// argument (<file>) and nothing else -- run_canonize() has its own
+// parsing loop now that it also accepts --column-major and --write.
+[[nodiscard]] std::optional<std::string_view> single_path_argument(std::string_view command,
+                                                                     std::span<const std::string_view> args) {
+    if (args.size() != 1) {
+        std::cerr << "covarray: " << command << " needs a <file> argument\n";
+        return std::nullopt;
+    }
+    return args[0];
+}
+
+int run_canonize(std::span<const std::string_view> args) {
+    bool column_major = false;
+    std::optional<std::string_view> write_path;
+    std::string_view path;
+    bool has_path = false;
+
+    for (std::size_t i = 0; i < args.size(); ++i) {
+        const std::string_view arg = args[i];
+        if (arg == "--column-major") {
+            column_major = true;
+        } else if (arg == "--write") {
+            if (i + 1 >= args.size()) {
+                std::cerr << "covarray: --write needs a value\n";
+                return 2;
+            }
+            write_path = args[++i];
+        } else if (!has_path) {
+            path = arg;
+            has_path = true;
+        } else {
+            std::cerr << "covarray: unrecognized argument '" << arg << "'\n";
+            return 2;
+        }
+    }
+
+    if (!has_path) {
+        std::cerr << "covarray: canonize needs a <file> argument\n";
+        return 2;
+    }
+
+    covarray::array a;
+    try {
+        a = covarray::read_array(std::filesystem::path(path));
+    } catch (const std::exception& e) {
+        std::cerr << "covarray: " << e.what() << '\n';
+        return 2;
+    }
+
+    const std::vector<covarray::symbol_type> form =
+        column_major ? covarray::canonical_form_column_major(a) : covarray::canonical_form(a);
+    for (std::size_t i = 0; i < form.size(); ++i) {
+        if (i != 0) {
+            std::cout << ' ';
+        }
+        std::cout << static_cast<unsigned>(form[i]);
+    }
+    std::cout << '\n';
+
+    if (write_path) {
+        try {
+            covarray::write_array(std::filesystem::path(*write_path), covarray::canonicalize(a));
+        } catch (const std::exception& e) {
+            std::cerr << "covarray: " << e.what() << '\n';
+            return 2;
+        }
+    }
+
+    return 0;
+}
+
+int run_is_canonical(std::span<const std::string_view> args) {
+    const std::optional<std::string_view> path = single_path_argument("is-canonical", args);
+    if (!path) {
+        return 2;
+    }
+
+    covarray::array a;
+    try {
+        a = covarray::read_array(std::filesystem::path(*path));
+    } catch (const std::exception& e) {
+        std::cerr << "covarray: " << e.what() << '\n';
+        return 2;
+    }
+
+    const bool canonical = covarray::is_canonical(a);
+    std::cout << (canonical ? "true" : "false") << '\n';
+    return canonical ? 0 : 1;
+}
+
 int run_kleitman_spencer_rows(std::span<const std::string_view> args) {
     if (args.size() != 1) {
         std::cerr << "covarray: kleitman-spencer-rows needs <k>\n";
@@ -426,6 +563,12 @@ int main(int argc, char** argv) {
     }
     if (args.front() == "check-classes") {
         return run_check_classes(std::span(args).subspan(1));
+    }
+    if (args.front() == "canonize") {
+        return run_canonize(std::span(args).subspan(1));
+    }
+    if (args.front() == "is-canonical") {
+        return run_is_canonical(std::span(args).subspan(1));
     }
     if (args.front() == "kleitman-spencer-rows") {
         return run_kleitman_spencer_rows(std::span(args).subspan(1));

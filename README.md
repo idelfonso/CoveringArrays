@@ -24,7 +24,8 @@ cmake --build build -j
 ctest --test-dir build
 ```
 
-GCC/g++ is the only supported compiler.
+GCC/g++ is the only supported compiler. The project requires C++20 (it
+uses `std::span`, among other C++20 library features).
 
 ## CLI usage
 

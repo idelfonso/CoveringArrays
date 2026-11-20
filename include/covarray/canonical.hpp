@@ -9,37 +9,26 @@
 // so there is nothing to permute it with).
 //
 // The standard way to decide that: reduce each array to its canonical
-// form -- the lexicographically smallest sequence reachable by any such
-// permutation, read column-major (column 0's N entries, then column 1's,
+// form -- the lexicographically smallest arrangement reachable by any
+// such permutation, read row-major (row 0's k entries, then row 1's,
 // ...) -- and compare element-wise. Two arrays are isomorphic iff their
 // canonical forms are equal.
 //
 // canonical_form() is exact, not a heuristic, but it is also genuinely
-// factorial-time, via one of two dual algorithms (picked per call,
-// whichever is cheaper for that array's shape -- see src/canonical.cpp):
+// factorial-time: O(k! * v!^k) -- see src/canonical.cpp. Symbol
+// permutation is defined per column, not per row, so there is no way to
+// fix the per-column symbol maps without a row order already in hand to
+// make "first occurrence" meaningful -- and no row order is in hand yet,
+// since finding one is the point. So column order and every per-column
+// symbol map are searched together; only once both are fixed does row
+// order get a closed form (sort the now fully-determined rows ascending).
 //
-//   - row search, O(N!): for a *fixed* row order, the optimal column
-//     order (sort ascending -- every column has the same length, so
-//     comparing concatenations of them reduces to comparing the columns
-//     themselves) and the optimal per-column symbol relabeling (greedy
-//     first-occurrence labeling) both have a closed form, so the only
-//     thing actually searched is the row permutation.
-//   - column search, O(k! * v!^k): symbol permutation is defined per
-//     column, not per row, so unlike the row-search case there is no way
-//     to fix the per-column symbol maps without a row order already in
-//     hand to make "first occurrence" meaningful -- and no row order is
-//     in hand yet, since finding one is the point. So column order and
-//     every per-column symbol map are searched together; only once both
-//     are fixed does row order get a closed form (sort the now
-//     fully-determined rows ascending).
-//
-// Which one runs is chosen by comparing N! against k! * v!^k (so it is
-// meant for whichever of N or k is small -- a covering array with far
-// more rows than columns and few symbols, or the reverse, is the common
-// case this picks up), never both. This is still meant for the small
-// arrays an exhaustive equivalence-class enumeration produces, not for
-// anything covarray::sa_construct() would build at scale in both
-// dimensions.
+// That cost has no N in it at all, so this scales in the number of rows
+// for free -- exactly the shape this project's covering arrays actually
+// have (far more rows than columns). It is still meant for the small,
+// few-columns arrays an exhaustive equivalence-class enumeration
+// produces, not for anything covarray::sa_construct() would build at
+// scale in both dimensions.
 #ifndef COVARRAY_CANONICAL_HPP
 #define COVARRAY_CANONICAL_HPP
 
@@ -49,15 +38,38 @@
 
 namespace covarray {
 
-// The canonical form of `a`, as documented above. Its length is always
-// a.rows() * a.columns().
+// `a` itself, rearranged into its canonical form (as documented above):
+// same n, k, v, t, but with rows, columns, and per-column symbols
+// permuted into the lexicographically smallest arrangement. Unlike
+// canonical_form(), this is a genuine covering array -- pass it to
+// covarray::write_array() to persist it in the project's standard file
+// format.
+[[nodiscard]] array canonicalize(const array& a);
+
+// canonicalize(a)'s matrix, flattened row-major (row 0's k entries, then
+// row 1's, ...) into a single sequence for comparison. Its length is
+// always a.rows() * a.columns().
 [[nodiscard]] std::vector<symbol_type> canonical_form(const array& a);
+
+// canonicalize(a)'s matrix, flattened column-major (column 0's N
+// entries, then column 1's, ...) instead of canonical_form()'s row-major
+// order. Same content as canonical_form(a), reordered -- for callers
+// that need the column-major convention specifically, rather than as a
+// comparison key.
+[[nodiscard]] std::vector<symbol_type> canonical_form_column_major(const array& a);
 
 // True iff `a` and `b` are isomorphic -- equivalently, iff
 // canonical_form(a) == canonical_form(b). Comparing canonical forms
 // directly is cheaper when checking more than one pair against the same
 // array, since each form only needs to be computed once.
 [[nodiscard]] bool isomorphic(const array& a, const array& b);
+
+// True iff `a` is already its own canonical form -- i.e. no permutation of
+// rows, columns, or per-column symbols reaches anything lexicographically
+// smaller than a's current arrangement. As expensive as canonical_form()
+// itself when the given array is already canonical, less expensive than
+// canonical_form() if the given array is not canonical.
+[[nodiscard]] bool is_canonical(const array& a);
 
 }  // namespace covarray
 
