@@ -367,8 +367,8 @@ void check_next_column_2(int k, int col, AuxBuffers &aux, array &best) {
 // the rows decided so far ascending on every prefix) -- see
 // check_next_column_2()'s own documentation for how the incumbent `best`
 // is tracked and refined. Returns the canonical arrangement itself (same
-// n, k, v, t as `a`), not a flattening of it -- canonical_form() and
-// canonical_form_column_major() each flatten it their own way.
+// n, k, v, t as `a`), not a flattening of it -- canonical_form_column_major()
+// does that flattening.
 [[nodiscard]] array canonicalize_by_column_search(const array& a) {
     const int n = static_cast<int>(a.rows());
     const int k = static_cast<int>(a.columns());
@@ -391,12 +391,6 @@ void check_next_column_2(int k, int col, AuxBuffers &aux, array &best) {
 
 array canonicalize(const array& a) { return canonicalize_by_column_search(a); }
 
-std::vector<symbol_type> canonical_form(const array& a) {
-    const array canonical = canonicalize_by_column_search(a);
-    const std::span<const symbol_type> data = canonical.data();
-    return std::vector<symbol_type>(data.begin(), data.end());
-}
-
 std::vector<symbol_type> canonical_form_column_major(const array& a) {
     const array canonical = canonicalize_by_column_search(a);
     const std::size_t n = canonical.rows();
@@ -412,7 +406,9 @@ std::vector<symbol_type> canonical_form_column_major(const array& a) {
     return out;
 }
 
-bool isomorphic(const array& a, const array& b) { return canonical_form(a) == canonical_form(b); }
+bool isomorphic(const array& a, const array& b) {
+    return canonical_form_column_major(a) == canonical_form_column_major(b);
+}
 
 bool is_canonical(const array& a) {
     const int n = static_cast<int>(a.rows());

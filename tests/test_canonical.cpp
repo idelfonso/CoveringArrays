@@ -21,41 +21,41 @@ covarray::array make_array(std::size_t v,
 
 }  // namespace
 
-TEST(canonical_form, RowPermutationDoesNotChangeIt) {
+TEST(canonical_form_column_major, RowPermutationDoesNotChangeIt) {
     const covarray::array a = make_array(2, 1, {{0, 1}, {1, 0}});
     const covarray::array b = make_array(2, 1, {{1, 0}, {0, 1}});  // rows swapped
 
-    EXPECT_EQ(covarray::canonical_form(a), covarray::canonical_form(b));
+    EXPECT_EQ(covarray::canonical_form_column_major(a), covarray::canonical_form_column_major(b));
     EXPECT_TRUE(covarray::isomorphic(a, b));
 }
 
-TEST(canonical_form, ColumnPermutationDoesNotChangeIt) {
+TEST(canonical_form_column_major, ColumnPermutationDoesNotChangeIt) {
     const covarray::array a = make_array(2, 1, {{0, 1, 1}, {1, 0, 0}});
     const covarray::array b = make_array(2, 1, {{1, 1, 0}, {0, 0, 1}});  // columns reordered
 
-    EXPECT_EQ(covarray::canonical_form(a), covarray::canonical_form(b));
+    EXPECT_EQ(covarray::canonical_form_column_major(a), covarray::canonical_form_column_major(b));
     EXPECT_TRUE(covarray::isomorphic(a, b));
 }
 
-TEST(canonical_form, SymbolRelabelingDoesNotChangeIt) {
+TEST(canonical_form_column_major, SymbolRelabelingDoesNotChangeIt) {
     const covarray::array a = make_array(3, 1, {{0, 1, 2}, {1, 2, 0}, {2, 0, 1}});
     // Relabel 0 -> 2, 1 -> 0, 2 -> 1 throughout.
     const covarray::array b = make_array(3, 1, {{2, 0, 1}, {0, 1, 2}, {1, 2, 0}});
 
-    EXPECT_EQ(covarray::canonical_form(a), covarray::canonical_form(b));
+    EXPECT_EQ(covarray::canonical_form_column_major(a), covarray::canonical_form_column_major(b));
     EXPECT_TRUE(covarray::isomorphic(a, b));
 }
 
-TEST(canonical_form, CombinedPermutationsDoNotChangeIt) {
+TEST(canonical_form_column_major, CombinedPermutationsDoNotChangeIt) {
     const covarray::array a = make_array(2, 2, {{0, 0, 0}, {0, 1, 1}, {1, 0, 1}, {1, 1, 0}});
     // Reverse the rows, swap columns 0 and 2, and flip symbols 0 <-> 1.
     const covarray::array b = make_array(2, 2, {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {1, 1, 1}});
 
-    EXPECT_EQ(covarray::canonical_form(a), covarray::canonical_form(b));
+    EXPECT_EQ(covarray::canonical_form_column_major(a), covarray::canonical_form_column_major(b));
     EXPECT_TRUE(covarray::isomorphic(a, b));
 }
 
-TEST(canonical_form, StructurallyDifferentArraysAreNotIsomorphic) {
+TEST(canonical_form_column_major, StructurallyDifferentArraysAreNotIsomorphic) {
     // With a single column, row permutation plus relabeling its symbols
     // can turn any arrangement into any other with the same multiset of
     // per-symbol counts, and only those. `a` has three 0s and one 1; `c`
@@ -64,35 +64,35 @@ TEST(canonical_form, StructurallyDifferentArraysAreNotIsomorphic) {
     const covarray::array a = make_array(2, 1, {{0}, {0}, {0}, {1}});
     const covarray::array c = make_array(2, 1, {{0}, {0}, {1}, {1}});
 
-    EXPECT_NE(covarray::canonical_form(a), covarray::canonical_form(c));
+    EXPECT_NE(covarray::canonical_form_column_major(a), covarray::canonical_form_column_major(c));
     EXPECT_FALSE(covarray::isomorphic(a, c));
 }
 
-TEST(canonical_form, ColumnSearchAlgorithmDetectsIsomorphism) {
+TEST(canonical_form_column_major, ColumnSearchAlgorithmDetectsIsomorphism) {
     // Mirrors CombinedPermutationsDoNotChangeIt above, but for a shape
     // with more rows than columns (N=6, k=2) -- exactly the lopsided
-    // shape canonical_form()'s O(k! * v!^k) cost is meant for.
+    // shape canonical_form_column_major()'s O(k! * v!^k) cost is meant for.
     const covarray::array a = make_array(2, 1, {{0, 0}, {0, 1}, {1, 0}, {1, 1}, {0, 0}, {1, 1}});
     // Reverse the rows, swap the two columns, and flip symbols 0 <-> 1.
     const covarray::array b = make_array(2, 1, {{0, 0}, {1, 1}, {0, 0}, {1, 0}, {0, 1}, {1, 1}});
 
-    EXPECT_EQ(covarray::canonical_form(a), covarray::canonical_form(b));
+    EXPECT_EQ(covarray::canonical_form_column_major(a), covarray::canonical_form_column_major(b));
     EXPECT_TRUE(covarray::isomorphic(a, b));
 }
 
-TEST(canonical_form, WildcardIsNeverRelabeled) {
+TEST(canonical_form_column_major, WildcardIsNeverRelabeled) {
     const covarray::symbol_type wildcard = 2;  // v == 2
     const covarray::array a = make_array(2, 1, {{wildcard, 0}, {1, wildcard}});
     // Relabel the real symbols 0 <-> 1; the wildcard entries must stay put.
     const covarray::array b = make_array(2, 1, {{wildcard, 1}, {0, wildcard}});
 
-    EXPECT_EQ(covarray::canonical_form(a), covarray::canonical_form(b));
+    EXPECT_EQ(covarray::canonical_form_column_major(a), covarray::canonical_form_column_major(b));
     EXPECT_TRUE(covarray::isomorphic(a, b));
 }
 
-TEST(canonical_form, EmptyArrayHasAnEmptyCanonicalForm) {
+TEST(canonical_form_column_major, EmptyArrayHasAnEmptyCanonicalForm) {
     const covarray::array a;  // 0 x 0
-    EXPECT_TRUE(covarray::canonical_form(a).empty());
+    EXPECT_TRUE(covarray::canonical_form_column_major(a).empty());
 }
 
 TEST(is_canonical, TrueForAnAlreadyCanonicalTwoColumnArray) {
