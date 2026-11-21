@@ -31,7 +31,7 @@ array::array(std::size_t n, std::size_t k, std::size_t v, std::size_t t)
 }
 
 symbol_type& array::at(std::size_t row, std::size_t col) {
-    if (row < 0 || row >= n_ || col < 0 || col >= k_) {
+    if (row >= n_ || col >= k_) {
         throw std::out_of_range(std::format(
             "covarray::array::at: index ({}, {}) out of range for a {} x {} array", row, col, n_, k_));
     }
