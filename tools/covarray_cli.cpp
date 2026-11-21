@@ -45,8 +45,8 @@
 // an expensive, factorial-time check). It reports every problem it finds
 // rather than stopping at the first.
 //
-// Exit status for check-classes: `0` if every check passed, `1` if any
-// did not, `2` on a usage error.
+// Exit status for check-classes: `0` if every check passed, `1` on any
+// failure, including a usage error.
 //
 // `canonize` and `is-canonical` both read `<file>` (the project's array
 // text format) and run covarray::canonical_form_column_major() /
@@ -261,12 +261,12 @@ int run_check_classes(std::span<const std::string_view> args) {
         if (arg == "--expect") {
             if (i + 1 >= args.size()) {
                 std::cerr << "covarray: --expect needs a value\n";
-                return 2;
+                return 1;
             }
             std::size_t value = 0;
             if (!parse_uint(args[++i], value)) {
                 std::cerr << "covarray: invalid --expect value '" << args[i] << "'\n";
-                return 2;
+                return 1;
             }
             expect = value;
         } else {
@@ -276,18 +276,18 @@ int run_check_classes(std::span<const std::string_view> args) {
 
     if (positional.size() != 1) {
         std::cerr << "covarray: check-classes needs <dir>\n";
-        return 2;
+        return 1;
     }
     if (!expect) {
         std::cerr << "covarray: check-classes needs --expect <count>\n";
-        return 2;
+        return 1;
     }
 
     const std::filesystem::path dir(positional[0]);
     std::error_code is_dir_error;
     if (!std::filesystem::is_directory(dir, is_dir_error) || is_dir_error) {
         std::cerr << "covarray: '" << dir.string() << "' is not a readable directory\n";
-        return 2;
+        return 1;
     }
 
     const std::filesystem::path count_path = dir / "count.txt";
@@ -295,7 +295,7 @@ int run_check_classes(std::span<const std::string_view> args) {
     std::size_t declared_count = 0;
     if (!count_in || !(count_in >> declared_count)) {
         std::cerr << "covarray: '" << count_path.string() << "' is missing or does not contain an integer\n";
-        return 2;
+        return 1;
     }
 
     bool ok = true;
